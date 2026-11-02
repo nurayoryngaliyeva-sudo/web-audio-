@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CYBER LAB // Neon Terminal & Sound Synth</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script src="scripts.js" defer></script>
+
+  <link rel="stylesheet" href="style.css"
+  
+  <!-- Tailwind Configuration -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            cyber: {
+              black: '#08090d',
+              card: 'rgba(15, 23, 42, 0.6)',
+              cyan: '#00f3ff',
+              magenta: '#ff0055',
+              yellow: '#ffe600',
+              emerald: '#00ff9d',
+            }
+          },
+          fontFamily: {
+            mono: ['Fira Code', 'Courier New', 'monospace'],
+            sans: ['Inter', 'sans-serif'],
+          },
+          boxShadow: {
+            'neon-cyan': '0 0 20px rgba(0, 243, 255, 0.4), inset 0 0 15px rgba(0, 243, 255, 0.2)',
+            'neon-magenta': '0 0 20px rgba(255, 0, 85, 0.4), inset 0 0 15px rgba(255, 0, 85, 0.2)',
+            'neon-yellow': '0 0 20px rgba(255, 230, 0, 0.4), inset 0 0 15px rgba(255, 230, 0, 0.2)',
+            'neon-emerald': '0 0 20px rgba(0, 255, 157, 0.4), inset 0 0 15px rgba(0, 255, 157, 0.2)',
+          }
+        }
+      }
+    }
+  </script>
+
+
+</head>
+<body class="bg-cyber-black text-slate-200 font-sans min-h-screen relative overflow-x-hidden theme-cyan">
+
+  <!-- HTML5 Dynamic Canvas Background -->
+  <canvas id="bg-canvas" class="fixed top-0 left-0 w-full h-full -z-20"></canvas>
+  
+  <!-- CRT Scanline Overlay -->
+  <div class="fixed top-0 left-0 w-full h-full scanlines -z-10 opacity-40"></div>
+
+  <!-- Header / Navigation Bar -->
+  <header class="sticky top-0 z-40 glass-panel border-b border-slate-800/80 px-4 py-3 sm:px-8">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="p-2 rounded-lg bg-slate-900 border border-slate-700 text-glow">
+          <i data-lucide="cpu" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-wider text-white font-mono flex items-center gap-2">
+            CYBER<span class="text-glow">LAB</span> // v2.04
+          </h1>
+          <p class="text-xs text-slate-400 font-mono">NEON AUDIO MATRIX & TERMINAL</p>
+        </div>
+      </div>
+
+      <!-- Theme Controls & Master Audio Switch -->
+      <div class="flex items-center gap-4">
+        <!-- Audio Init Button -->
+        <button id="audio-toggle-btn" class="glass-btn px-4 py-2 rounded-lg border border-slate-700 hover:border-slate-500 text-xs font-mono flex items-center gap-2 transition">
+          <i data-lucide="volume-2" class="w-4 h-4 text-glow"></i>
+          <span id="audio-status-text">AUDIO: OFF</span>
+        </button>
+
+        <!-- Theme Preset Selector Buttons -->
+        <div class="flex items-center gap-1.5 glass-panel p-1.5 rounded-lg border border-slate-800">
+          <button onclick="setTheme('cyan')" title="Cyan Theme" class="w-5 h-5 rounded-full bg-cyber-cyan border border-white/20 hover:scale-110 transition-transform"></button>
+          <button onclick="setTheme('magenta')" title="Magenta Theme" class="w-5 h-5 rounded-full bg-cyber-magenta border border-white/20 hover:scale-110 transition-transform"></button>
+          <button onclick="setTheme('yellow')" title="Yellow Theme" class="w-5 h-5 rounded-full bg-cyber-yellow border border-white/20 hover:scale-110 transition-transform"></button>
+          <button onclick="setTheme('emerald')" title="Emerald Theme" class="w-5 h-5 rounded-full bg-cyber-emerald border border-white/20 hover:scale-110 transition-transform"></button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="max-w-7xl mx-auto px-4 py-6 sm:px-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- LEFT COLUMN: Synthesizer & Audio Control (7 Cols) -->
+    <section class="lg:col-span-7 flex flex-col gap-6">
+      
+      <!-- Synthesizer Main Card -->
+      <div class="glass-panel rounded-xl p-5 border border-slate-800/80 shadow-2xl flex flex-col gap-5">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-2">
+            <i data-lucide="radio" class="w-5 h-5 text-glow"></i>
+            <h2 class="font-mono text-sm uppercase tracking-wider text-slate-300 font-semibold">
+              SYNTHESIZER ENGINE
+            </h2>
+          </div>
+          <span class="text-xs font-mono text-slate-500">SYNTH-TYPE: OSC-WAVE</span>
+        </div>
+
+        <!-- Real-time Oscilloscope Canvas -->
+        <div class="relative w-full h-32 bg-slate-950/80 rounded-lg overflow-hidden border border-slate-800/80 flex items-center justify-center">
+          <canvas id="visualizer-canvas" class="w-full h-full absolute top-0 left-0"></canvas>
+          <div id="vis-placeholder" class="text-xs font-mono text-slate-600 flex items-center gap-2 pointer-events-none">
+            <i data-lucide="activity" class="w-4 h-4"></i> PRESS PADS / KEYS FOR WAVEFORM
+          </div>
+        </div>
+
+        <!-- Synthesizer Controls: Waveform, Delay, Pitch Filter -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono text-xs">
+          <!-- Waveform Select -->
+          <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-800 flex flex-col gap-2">
+            <label class="text-slate-400 flex items-center gap-1.5">
+              <i data-lucide="waves" class="w-3.5 h-3.5 text-glow"></i> WAVEFORM
+            </label>
+            <select id="wave-select" class="bg-slate-950 text-slate-200 border border-slate-700 rounded p-1.5 outline-none focus:border-cyan-400 transition">
+              <option value="sine">SINE WAVE</option>
+              <option value="square">SQUARE WAVE</option>
+              <option value="sawtooth" selected>SAWTOOTH</option>
+              <option value="triangle">TRIANGLE</option>
+            </select>
+          </div>
+
+          <!-- Cutoff Filter Knob/Slider -->
+          <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-800 flex flex-col gap-2">
+            <div class="flex justify-between text-slate-400">
+              <label class="flex items-center gap-1.5">
+                <i data-lucide="sliders" class="w-3.5 h-3.5 text-glow"></i> CUTOFF
+              </label>
+              <span id="cutoff-val" class="text-glow">2500Hz</span>
+            </div>
+            <input id="cutoff-slider" type="range" min="200" max="8000" value="2500" class="w-full accent-cyan-400 bg-slate-950 h-2 rounded cursor-pointer">
+          </div>
+
+          <!-- Echo/Delay Knob/Slider -->
+          <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-800 flex flex-col gap-2">
+            <div class="flex justify-between text-slate-400">
+              <label class="flex items-center gap-1.5">
+                <i data-lucide="disc" class="w-3.5 h-3.5 text-glow"></i> ECHO DELAY
+              </label>
+              <span id="delay-val" class="text-glow">30%</span>
+            </div>
+            <input id="delay-slider" type="range" min="0" max="80" value="30" class="w-full accent-cyan-400 bg-slate-950 h-2 rounded cursor-pointer">
+          </div>
+        </div>
+
+        <!-- Interactive Drum & FX Pads -->
+        <div>
+          <h3 class="text-xs font-mono text-slate-400 mb-3 uppercase tracking-wider flex items-center gap-2">
+            <i data-lucide="grid" class="w-3.5 h-3.5"></i> Cyber Sound Pads (Click or Hotkeys)
+          </h3>
+          <div class="grid grid-cols-4 gap-2.5">
+            <button class="synth-pad glass-btn p-4 rounded-lg border border-slate-800 hover:border-cyan-400 flex flex-col items-center justify-center gap-1.5 active:scale-95 transition" data-note="C3" data-key="Q">
+              <span class="font-mono text-sm font-bold text-white">BASS</span>
+              <span class="font-mono text-[10px] text-slate-500">[ Q ]</span>
+            </button>
+            <button class="synth-pad glass-btn p-4 rounded-lg border border-slate-800 hover:border-cyan-400 flex flex-col items-center justify-center gap-1.5 active:scale-95 transition" data-note="E3" data-key="W">
+              <span class="font-mono text-sm font-bold text-white">SUB</span>
+              <span class="font-mono text-[10px] text-slate-500">[ W ]</span>
+            </button>
+            <button class="synth-pad glass-btn p-4 rounded-lg border border-slate-800 hover:border-cyan-400 flex flex-col items-center justify-center gap-1.5 active:scale-95 transition" data-note="G3" data-key="E">
+              <span class="font-mono text-sm font-bold text-white">NEON</span>
+              <span class="font-mono text-[10px] text-slate-500">[ E ]</span>
+            </button>
+            <button class="synth-pad glass-btn p-4 rounded-lg border border-slate-800 hover:border-cyan-400 flex flex-col items-center justify-center gap-1.5 active:scale-95 transition" data-note="B3" data-key="R">
+              <span class="font-mono text-sm font-bold text-white">GLITCH</span>
+              <span class="font-mono text-[10px] text-slate-500">[ R ]</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Virtual Synth Keyboard -->
+        <div>
+          <h3 class="text-xs font-mono text-slate-400 mb-3 uppercase tracking-wider">
+            Key Synth Notes (Octave 4)
+          </h3>
+          <div class="grid grid-cols-7 gap-1 sm:gap-2">
+            <button class="key-btn glass-btn py-6 rounded border border-slate-700 hover:border-cyan-400 font-mono text-xs text-center transition active:scale-95" data-freq="261.63" data-key="1">
+              C4<br><span class="text-[10px] text-slate-500">[1]</span>
+            </button>
+            <button class="key-btn glass-btn py-6 rounded border border-slate-700 hover:border-cyan-400 font-mono text-xs text-center transition active:scale-95" data-freq="293.66" data-key="2">
+              D4<br><span class="text-[10px] text-slate-500">[2]</span>
+            </button>
+            <button class="key-btn glass-btn py-6 rounded border border-slate-700 hover:border-cyan-400 font-mono text-xs text-center transition active:scale-95" data-freq="329.63" data-key="3">
+              E4<br><span class="text-[10px] text-slate-500">[3]</span>
+            </button>
+            <button class="key-btn glass-btn py-6 rounded border border-slate-700 hover:border-cyan-400 font-mono text-xs text-center transition active:scale-95" data-freq="349.23" data-key="4">
+              F4<br><span class="text-[10px] text-slate-500">[4]</span>
+            </button>
+            <button class="key-btn glass-btn py-6 rounded border border-slate-700 hover:border-cyan-400 font-mono text-xs text-center transition active:scale-95" data-freq="392.00" data-key="5">
+              G4<br><span class="text-[10px] text-slate-500">[5]</span>
+            </button>
+            <button class="key-btn glass-btn py-6 rounded border border-slate-700 hover:border-cyan-400 font-mono text-xs text-center transition active:scale-95" data-freq="440.00" data-key="6">
+              A4<br><span class="text-[10px] text-slate-500">[6]</span>
+            </button>
+            <button class="key-btn glass-btn py-6 rounded border border-slate-700 hover:border-cyan-400 font-mono text-xs text-center transition active:scale-95" data-freq="493.88" data-key="7">
+              B4<br><span class="text-[10px] text-slate-500">[7]</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN: Interactive Terminal & System Status (5 Cols) -->
+    <section class="lg:col-span-5 flex flex-col gap-6">
+
+      <!-- Interactive Cyber Terminal -->
+      <div class="glass-panel rounded-xl p-4 border border-slate-800/80 shadow-2xl flex flex-col h-[480px]">
+        
+        <!-- Terminal Header Bar -->
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
+          <div class="flex items-center gap-2">
+            <i data-lucide="terminal" class="w-4 h-4 text-glow"></i>
+            <span class="font-mono text-xs font-semibold text-slate-300">CYBER_CLI v1.0.9</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <div class="w-2.5 h-2.5 rounded-full bg-red-500/80"></div>
+            <div class="w-2.5 h-2.5 rounded-full bg-yellow-500/80"></div>
+            <div class="w-2.5 h-2.5 rounded-full bg-green-500/80"></div>
+          </div>
+        </div>
+
+        <!-- Terminal Output Log Container -->
+        <div id="terminal-output" class="flex-1 font-mono text-xs text-slate-300 space-y-1.5 overflow-y-auto pr-2">
+          <div class="text-slate-500">System Initialized. Type <span class="text-glow">'help'</span> for command list.</div>
+          <div class="text-slate-500">--------------------------------------------------</div>
+        </div>
+
+        <!-- Terminal Prompt Input -->
+        <div class="mt-3 pt-2 border-t border-slate-800 flex items-center gap-2 font-mono text-xs">
+          <span class="text-glow font-bold">&gt;</span>
+          <input id="terminal-input" type="text" placeholder="type a command..." class="flex-1 bg-transparent text-white outline-none border-none placeholder-slate-600 focus:ring-0">
+        </div>
+      </div>
+
+      <!-- Live Dashboard / Diagnostics Panel -->
+      <div class="glass-panel rounded-xl p-4 border border-slate-800/80 shadow-2xl flex flex-col gap-3 font-mono text-xs">
+        <div class="flex justify-between items-center text-slate-400 border-b border-slate-800 pb-2">
+          <span class="flex items-center gap-2">
+            <i data-lucide="cpu" class="w-4 h-4 text-glow"></i> SYSTEM DIAGNOSTICS
+          </span>
+          <span class="text-[10px] text-emerald-400 font-semibold uppercase">ONLINE</span>
+        </div>
+
+        <!-- Status Bars -->
+        <div class="space-y-2.5">
+          <div>
+            <div class="flex justify-between mb-1 text-[11px]">
+              <span class="text-slate-400">PARTICLE GRID LOAD</span>
+              <span id="particle-count-text" class="text-glow">120 UNITS</span>
+            </div>
+            <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
+              <div id="particle-bar" class="bg-glow h-full w-3/4 transition-all duration-300"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between mb-1 text-[11px]">
+              <span class="text-slate-400">SYNTH SIGNAL FREQ</span>
+              <span id="freq-readout" class="text-slate-300">440.00 Hz</span>
+            </div>
+            <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
+              <div id="freq-bar" class="bg-glow h-full w-1/2 transition-all duration-300"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Notification Toast Container -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- JavaScript Logic -->
+  
+</body>
+</html>
